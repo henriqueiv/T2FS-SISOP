@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		62959EBD1DDA56A700A7F32C /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 62959EBC1DDA56A700A7F32C /* main.c */; };
+		62959ECE1DDA56BB00A7F32C /* apidisk.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 62959EC91DDA56BB00A7F32C /* apidisk.o */; };
+		62959ECF1DDA56BB00A7F32C /* bitmap2.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 62959ECA1DDA56BB00A7F32C /* bitmap2.o */; };
+		62959ED01DDA56BB00A7F32C /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 62959ECB1DDA56BB00A7F32C /* Makefile */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +28,12 @@
 /* Begin PBXFileReference section */
 		62959EB91DDA56A700A7F32C /* t2fs */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = t2fs; sourceTree = BUILT_PRODUCTS_DIR; };
 		62959EBC1DDA56A700A7F32C /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		62959EC51DDA56BB00A7F32C /* apidisk.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = apidisk.h; sourceTree = "<group>"; };
+		62959EC61DDA56BB00A7F32C /* bitmap2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitmap2.h; sourceTree = "<group>"; };
+		62959EC71DDA56BB00A7F32C /* t2fs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = t2fs.h; sourceTree = "<group>"; };
+		62959EC91DDA56BB00A7F32C /* apidisk.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = apidisk.o; sourceTree = "<group>"; };
+		62959ECA1DDA56BB00A7F32C /* bitmap2.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = bitmap2.o; sourceTree = "<group>"; };
+		62959ECB1DDA56BB00A7F32C /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +41,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				62959ECE1DDA56BB00A7F32C /* apidisk.o in Frameworks */,
+				62959ECF1DDA56BB00A7F32C /* bitmap2.o in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -57,9 +68,55 @@
 		62959EBB1DDA56A700A7F32C /* t2fs */ = {
 			isa = PBXGroup;
 			children = (
+				62959EC31DDA56BB00A7F32C /* bin */,
+				62959EC41DDA56BB00A7F32C /* include */,
+				62959EC81DDA56BB00A7F32C /* lib */,
+				62959ECB1DDA56BB00A7F32C /* Makefile */,
+				62959ECC1DDA56BB00A7F32C /* src */,
+				62959ECD1DDA56BB00A7F32C /* teste */,
 				62959EBC1DDA56A700A7F32C /* main.c */,
 			);
 			path = t2fs;
+			sourceTree = "<group>";
+		};
+		62959EC31DDA56BB00A7F32C /* bin */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = bin;
+			sourceTree = "<group>";
+		};
+		62959EC41DDA56BB00A7F32C /* include */ = {
+			isa = PBXGroup;
+			children = (
+				62959EC51DDA56BB00A7F32C /* apidisk.h */,
+				62959EC61DDA56BB00A7F32C /* bitmap2.h */,
+				62959EC71DDA56BB00A7F32C /* t2fs.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		62959EC81DDA56BB00A7F32C /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				62959EC91DDA56BB00A7F32C /* apidisk.o */,
+				62959ECA1DDA56BB00A7F32C /* bitmap2.o */,
+			);
+			path = lib;
+			sourceTree = "<group>";
+		};
+		62959ECC1DDA56BB00A7F32C /* src */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		62959ECD1DDA56BB00A7F32C /* teste */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = teste;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -120,6 +177,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				62959ED01DDA56BB00A7F32C /* Makefile in Sources */,
 				62959EBD1DDA56A700A7F32C /* main.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
