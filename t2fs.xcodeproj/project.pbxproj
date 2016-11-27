@@ -30,10 +30,10 @@
 
 /* Begin PBXFileReference section */
 		621402991DEB83FF008C63B4 /* superblock.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = superblock.c; sourceTree = "<group>"; };
-		6214029A1DEB83FF008C63B4 /* superblock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = superblock.h; sourceTree = "<group>"; };
+		6214029A1DEB83FF008C63B4 /* superblock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = superblock.h; path = superblock.h; sourceTree = "<group>"; };
 		62222D841DDA5BCE001C6C58 /* t2fs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = t2fs.c; sourceTree = "<group>"; };
 		62222D861DDA5F56001C6C58 /* paths.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = paths.c; sourceTree = "<group>"; };
-		62222D871DDA5F56001C6C58 /* paths.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = paths.h; sourceTree = "<group>"; };
+		62222D871DDA5F56001C6C58 /* paths.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = paths.h; path = paths.h; sourceTree = "<group>"; };
 		62222D891DDA604D001C6C58 /* logging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = logging.h; sourceTree = "<group>"; };
 		62959EB91DDA56A700A7F32C /* t2fs */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = t2fs; sourceTree = BUILT_PRODUCTS_DIR; };
 		62959EBC1DDA56A700A7F32C /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
@@ -61,8 +61,8 @@
 		62959EB01DDA56A700A7F32C = {
 			isa = PBXGroup;
 			children = (
-				62959EBB1DDA56A700A7F32C /* t2fs */,
 				62959EBA1DDA56A700A7F32C /* Products */,
+				62959EBB1DDA56A700A7F32C /* t2fs */,
 			);
 			sourceTree = "<group>";
 		};
@@ -80,9 +80,9 @@
 				62959EC31DDA56BB00A7F32C /* bin */,
 				62959EC41DDA56BB00A7F32C /* include */,
 				62959EC81DDA56BB00A7F32C /* lib */,
-				62959ECB1DDA56BB00A7F32C /* Makefile */,
 				62959ECC1DDA56BB00A7F32C /* src */,
 				62959ECD1DDA56BB00A7F32C /* teste */,
+				62959ECB1DDA56BB00A7F32C /* Makefile */,
 				62959EBC1DDA56A700A7F32C /* main.c */,
 			);
 			path = t2fs;
@@ -98,9 +98,11 @@
 		62959EC41DDA56BB00A7F32C /* include */ = {
 			isa = PBXGroup;
 			children = (
-				62222D891DDA604D001C6C58 /* logging.h */,
 				62959EC51DDA56BB00A7F32C /* apidisk.h */,
 				62959EC61DDA56BB00A7F32C /* bitmap2.h */,
+				62222D891DDA604D001C6C58 /* logging.h */,
+				62222D871DDA5F56001C6C58 /* paths.h */,
+				6214029A1DEB83FF008C63B4 /* superblock.h */,
 				62959EC71DDA56BB00A7F32C /* t2fs.h */,
 			);
 			path = include;
@@ -119,10 +121,8 @@
 			isa = PBXGroup;
 			children = (
 				62222D861DDA5F56001C6C58 /* paths.c */,
-				62222D871DDA5F56001C6C58 /* paths.h */,
-				62222D841DDA5BCE001C6C58 /* t2fs.c */,
 				621402991DEB83FF008C63B4 /* superblock.c */,
-				6214029A1DEB83FF008C63B4 /* superblock.h */,
+				62222D841DDA5BCE001C6C58 /* t2fs.c */,
 			);
 			path = src;
 			sourceTree = "<group>";
