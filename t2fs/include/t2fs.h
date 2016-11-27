@@ -11,6 +11,8 @@
 
 #define	INVALID_PTR	-1
 
+#define ERROR -1
+
 typedef int FILE2;
 typedef int DIR2;
 
