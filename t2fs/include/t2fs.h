@@ -13,6 +13,11 @@
 
 #define ERROR -1
 
+#include <string.h>
+#include <stdlib.h>
+#include "paths.h"
+#include "apidisk.h"
+
 typedef int FILE2;
 typedef int DIR2;
 

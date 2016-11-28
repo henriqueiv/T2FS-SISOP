@@ -8,9 +8,69 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include "paths.h"
-#include "t2fs.h"
-#include "../include/logging.h"
+#include "../include/t2fs.h"
+
+#define ID "T2FS"
+#define VERSION 0x7E02
+#define DISK_NAME "t2fs_disk.dat"
+
+static int INITIALIZED = 0;
+#define INIT()\
+    do {\
+        if (!INITIALIZED) {\
+            init_t2fs();\
+            INITIALIZED = 1;\
+        }\
+    } while(0)
+
+struct t2fs_superbloco* superblock;
+
+
+void show_superblock_info(struct t2fs_superbloco* superblock) {
+    printf("ID: %s\n", superblock->id);
+    printf("Version: 0x%x\n", superblock->version);
+    printf("Superblock Size: %hu\n", superblock->superblockSize);
+    printf("Free Blocks Bitmap Size: %hu\n", superblock->freeBlocksBitmapSize);
+    printf("Free inode Bitmap Size: %hu\n", superblock->freeInodeBitmapSize);
+    printf("inode Area Size: %hu\n", superblock->inodeAreaSize);
+    printf("BlockSize: %hu\n", superblock->blockSize);
+    printf("Disksize: %u\n", superblock->diskSize);
+}
+
+static void init_t2fs() {
+    char buffer[SECTOR_SIZE];
+    
+    if (read_sector(0, buffer)) {
+        printf("Erro ao ler o superbloco. O arquivo %s esta no mesmo caminho do executavel?\n", DISK_NAME);
+        exit(EXIT_FAILURE);
+    }
+    
+    superblock = malloc(sizeof(*superblock));
+    
+    /* offset 0 bytes */
+    strncpy(superblock->id, buffer, 4);
+    if (strncmp(superblock->id, ID, 4)) {
+        printf("Sistemas de arquivos desconhecido!\nEsperado: %s\nEncontrado: %s\n", ID, superblock->id);
+        exit(EXIT_FAILURE);
+    }
+    
+    superblock->version = *((WORD *)(buffer + 4));
+    if (superblock->version != 0x7E02) {
+        printf("Versão do sistema de arquivos não suportada!\nEsperado: %d\nEncontrado: 0x%hu\n", VERSION, superblock->version);
+        exit(EXIT_FAILURE);
+    }
+    
+    superblock->superblockSize = *((WORD *)(buffer + 6));
+    superblock->freeBlocksBitmapSize = *((WORD *)(buffer + 8));
+    superblock->freeInodeBitmapSize = *((WORD *)(buffer + 10));
+    superblock->inodeAreaSize = *((WORD *)(buffer + 12));
+    superblock->blockSize = *((DWORD *)(buffer + 14));
+    superblock->diskSize = *((DWORD *)(buffer + 16));
+    
+    show_superblock_info(superblock);
+}
+
+// ----------------------------------------
 
 int identify2 (char *name, int size) {
     printf("240501 - Henrique Valcanaia\n243666 - Pietro Degrazia");
@@ -19,6 +79,7 @@ int identify2 (char *name, int size) {
 
 FILE2 create2 (char *filename) {
     FILE2 file = ERROR;
+    INIT();
     return file;
 }
 
@@ -96,7 +157,7 @@ static int is_asbsolute_path(char* path) {
 //        return NULL;
 //    struct t2fs_record *records;
 //    size_t size = alloc_max_records(&records);
-//    size = read_records(records, size, SB->RootSectorStart, SB->DataSectorStart);
+//    size = read_records(records, size, superblock->RootSectorStart, superblock->DataSectorStart);
 //    assert(size > 0);
 //    
 //    // TODO

@@ -1,11 +1,11 @@
 /* For logging.h */
 #define _POSIX_C_SOURCE 200112L
-#include "paths.h"
-#include "t2fs.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include "../include/paths.h"
+#include "../include/t2fs.h"
 
 char* leftmost(char *pathname) {
     assert(is_absolute_path(pathname) && PWD_BUFFER_SIZE > 1);
