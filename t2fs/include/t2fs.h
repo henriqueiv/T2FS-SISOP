@@ -12,6 +12,7 @@
 #define	INVALID_PTR	-1
 
 #define ERROR -1
+#define SUCCESS 0
 
 #include <string.h>
 #include <stdlib.h>
