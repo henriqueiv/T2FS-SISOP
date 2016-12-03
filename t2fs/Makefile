@@ -57,6 +57,7 @@ mvLib:
 
 main:
 	$(CC) -o mainprog main.c -L$(LIB_DIR) -lt2fs -Wall	
+	$(CC) -o shell shell.c -L$(LIB_DIR) -lt2fs -Wall	
 
 clean:
-	rm -rf mainprog $(LIB_DIR)/*.a $(BIN_DIR)/t2fs.o $(TST_DIR)/*.o $(SRC_DIR)/*~ $(INC_DIR)/*~ *~
+	rm -rf mainprog shell $(LIB_DIR)/*.a $(BIN_DIR)/t2fs.o $(TST_DIR)/*.o $(SRC_DIR)/*~ $(INC_DIR)/*~ *~

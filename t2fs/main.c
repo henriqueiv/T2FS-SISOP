@@ -10,9 +10,6 @@
 #include "include/t2fs.h"
 
 int main(int argc, const char * argv[]) {
-    
-    create2("");
-    
-    
+    create2("");    
     return 0;
 }

@@ -44,19 +44,79 @@ void show_bitmap_info(int handle) {
     }
 }
 
-struct t2fs_inode* read_inode(int index) {
-    struct t2fs_inode* inode = malloc(sizeof(struct t2fs_inode));
+void show_inode_info(int index) {
+    struct t2fs_inode inode;
     char buffer[SECTOR_SIZE];
-    int inodeAreaSectorOffset = superblock->superblockSize + superblock->freeInodeBitmapSize + superblock->freeBlocksBitmapSize;
+    int inodeAreaSectorOffset = 1 + 1 + 1;//superblock+bitmapINODE+bitmapDADOS
+    int inodeIndexOffset = index*(sizeof(struct t2fs_inode));
     if(read_sector(inodeAreaSectorOffset, buffer) != 0) {
         printf("ERRO LENDO SETOR: %i\n", inodeAreaSectorOffset);
         exit(ERROR);
     }
-    int inodeOffset = index*sizeof(struct t2fs_inode);
-    memcpy(&inode->dataPtr ,buffer+inodeOffset,sizeof(inode->dataPtr));
-    memcpy(&inode->singleIndPtr, buffer+inodeOffset+sizeof(inode->dataPtr), sizeof(inode->singleIndPtr));
-    memcpy(&inode->doubleIndPtr, buffer+inodeOffset+sizeof(inode->dataPtr)+sizeof(inode->singleIndPtr), sizeof(inode->doubleIndPtr));
+    // int i =0;
+    // printf("BUFFER\n");
+    // for (; i<256; i++) {
+    //     printf("%c - ",buffer[i]);
+    // }
+    printf("\nEND_OF_BUFFER\n");
+    memcpy(&inode.dataPtr[0],buffer, 4);
+    memcpy(&inode.dataPtr[1],buffer+4, 4);
+    memcpy(&inode.singleIndPtr, buffer+8, 4);
+    memcpy(&inode.doubleIndPtr, buffer+12, 4);
+    printf("show_inode\n");
+    printf("%i\n", inode.dataPtr[0]);
+    printf("%i\n", inode.dataPtr[1]);
+    printf("%i\n", inode.singleIndPtr);
+    printf("%i\n", inode.doubleIndPtr);
+    return;
+}
+
+struct t2fs_inode* get_inode(int index) {
+    struct t2fs_inode* inode = (struct t2fs_inode*) malloc(sizeof(struct t2fs_inode));
+    char buffer[SECTOR_SIZE];
+    int inodeAreaSectorOffset = 1 + 1 + 1;//superblock+bitmapINODE+bitmapDADOS
+    int inodeIndexOffset = index*(sizeof(struct t2fs_inode));
+
+    if(read_sector(inodeAreaSectorOffset, buffer) != 0) {
+        printf("ERRO LENDO SETOR: %i\n", inodeAreaSectorOffset);
+        exit(ERROR);
+    }
+    
+    memcpy(inode->dataPtr,buffer+inodeIndexOffset, 8);
+    memcpy(&inode->singleIndPtr, buffer+8+inodeIndexOffset, 4);
+    memcpy(&inode->doubleIndPtr, buffer+12+inodeIndexOffset, 4);
+
+    // printf("get_inode: %i\n", index);
+    // printf("%i\n", inode->dataPtr[0]);
+    // printf("%i\n", inode->dataPtr[1]);
+    // printf("%i\n", inode->singleIndPtr);
+    // printf("%i\n", inode->doubleIndPtr);
     return inode;
+}
+
+struct t2fs_record* read_block(int index){
+    struct t2fs_record *record = (struct t2fs_record*)malloc(64);
+    char buffer[SECTOR_SIZE];
+    int data_block_sector_offset = 1 + 1 + 1 +125; //superbloco, bitmap, bitmap, inode
+    int block_sector_offset = index*16;    
+    if(read_sector(data_block_sector_offset + block_sector_offset, buffer) != 0) {
+        printf("ERRO LENDO SETOR: %i\n", data_block_sector_offset);
+        exit(ERROR);
+    }
+
+    memcpy(&record->TypeVal,        buffer,    1);
+    memcpy(&record->name,           buffer+1,  31);
+    memcpy(&record->blocksFileSize, buffer+33, 4);
+    memcpy(&record->bytesFileSize,  buffer+37, 4);
+    memcpy(&record->inodeNumber,    buffer+41, 4);
+    
+    printf("show_record\n");
+    printf("%hd\n", record->TypeVal);
+    printf("%s\n", record->name);
+    printf("%d\n", record->blocksFileSize);
+    printf("%d\n", record->bytesFileSize);
+    printf("%i\n", record->inodeNumber);
+    return record;
 }
 
 static void init_t2fs() {
@@ -95,10 +155,18 @@ static void init_t2fs() {
     // show_bitmap_info(BITMAP_INODE);
     // printf("BITMAP DADOS\n");
     // show_bitmap_info(BITMAP_DADOS);
-    printf("INODE 0\n");
-    struct t2fs_inode* inode = read_inode(1);
-    printf("%s\n", (inode->dataPtr[0]));
-    printf("%s\n", (inode->dataPtr[1]));
+    // printf("INODE 0\n");
+    // struct t2fs_inode* inode = read_inode(1);
+    // printf("%s\n", (inode->dataPtr[0]));
+    // printf("%s\n", (inode->dataPtr[1]));
+    // show_inode_info(0);
+    struct t2fs_inode *inode = get_inode(3);
+    // // printf("%i\n", inode->dataPtr[0]);
+    // struct t2fs_record *record = read_block(inode->dataPtr[0]);
+
+    // inode = get_inode(1); 
+    read_block(inode->dataPtr[0]);
+    
 }
 
 // ----------------------------------------
