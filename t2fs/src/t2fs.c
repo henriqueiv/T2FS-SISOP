@@ -37,6 +37,25 @@ void show_superblock_info(struct t2fs_superbloco* superblock) {
     printf("Disksize: %u\n", superblock->diskSize);
 }
 
+void show_bitmap_info(int handle) {
+    int i=0;
+    for(; i < SECTOR_SIZE*superblock->freeInodeBitmapSize; i++) {
+        printf("bit %i -> %i\n",i, getBitmap2(handle, i));
+    }
+}
+
+struct t2fs_inode* read_inode(int index) {
+    struct t2fs_inode* inode = malloc(sizeof(struct t2fs_inode));
+    char buffer[SECTOR_SIZE];
+    int inodeAreaSectorOffset = superblock->superblockSize + superblock->freeInodeBitmapSize + superblock->freeBlocksBitmapSize;
+    if(read_sector(inodeAreaSectorOffset, buffer) != 0) {
+        printf("ERRO LENDO SETOR: %i\n", inodeAreaSectorOffset);
+        exit(ERROR);
+    }
+    
+
+}
+
 static void init_t2fs() {
     char buffer[SECTOR_SIZE];
     
@@ -68,6 +87,11 @@ static void init_t2fs() {
     superblock->diskSize = *((DWORD *)(buffer + 16));
     
     show_superblock_info(superblock);
+
+    // printf("BITMAP iNODE\n");
+    // show_bitmap_info(BITMAP_INODE);
+    // printf("BITMAP DADOS\n");
+    // show_bitmap_info(BITMAP_DADOS);
 }
 
 // ----------------------------------------
@@ -80,6 +104,8 @@ int identify2 (char *name, int size) {
 FILE2 create2 (char *filename) {
     FILE2 file = ERROR;
     INIT();
+
+
     return file;
 }
 

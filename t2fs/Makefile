@@ -49,7 +49,7 @@ objetos: $(SRC_DIR)/t2fs.c $(SRC_DIR)/paths.c $(INC_DIR)/apidisk.h $(INC_DIR)/bi
 mvObj:
 	mv *.o $(BIN_DIR)
 
-libt2fs.a: $(BIN_DIR)/t2fs.o
+libt2fs.a: 
 	ar crs libt2fs.a $(BIN_DIR)/*.o $(LIB_DIR)/*.o
 
 mvLib:

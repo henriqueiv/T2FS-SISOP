@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include "paths.h"
 #include "apidisk.h"
+#include "bitmap2.h"
 
 typedef int FILE2;
 typedef int DIR2;
