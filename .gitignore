@@ -1,6 +1,6 @@
 # SISOP
-mainprog
-
+/t2fs/mainprog
+/t2fs/shell
 
 # Created by https://www.gitignore.io/api/xcode,c,git,macos
 

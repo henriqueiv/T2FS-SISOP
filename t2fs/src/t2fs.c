@@ -28,8 +28,15 @@ INITIALIZED = 1;\
 static FILE2 opened_files[OPENED_FILES_LIMIT];
 static int pointer_opened_files[OPENED_FILES_LIMIT];
 
-#define T2FS_RECORD_SIZE 64 // conforme email do Carissimi
+#define T2FS_RECORD_SIZE 64 // Conforme email do Carissimi 64 ao inves de sizeof que da 44 bytes
 #define ROOT_INODE_BLOCK_INDEX 0
+
+typedef int BLOCK_TYPE;
+#define BLOCK_TYPE_DATA 0
+#define BLOCK_TYPE_INODE 1
+static int data_block_sector_offset;
+static int inode_sector_offset;
+static int sectors_per_block;
 // -----------------------------------------
 
 struct t2fs_superbloco* superblock;
@@ -51,108 +58,75 @@ void show_superblock_info(struct t2fs_superbloco* superblock) {
 }
 
 void show_bitmap_info(int handle) {
-    int i=0;
-    for(; i < SECTOR_SIZE * superblock->freeInodeBitmapSize; i++) {
-        printf("bit %i -> %i\n",i, getBitmap2(handle, i));
-    }
-}
-
-void show_inode_info(int index) {
-    char buffer[SECTOR_SIZE];
-    
-    // superblock + bitmapINODE + bitmapDADOS
-    int inodeAreaSectorOffset = superblock->superblockSize + superblock->freeInodeBitmapSize + superblock->freeBlocksBitmapSize;
-    int inodeIndexOffset = index*(sizeof(struct t2fs_inode));
-    if(read_sector(inodeAreaSectorOffset, buffer) != 0) {
-        printf("ERRO LENDO SETOR: %i\n", inodeAreaSectorOffset);
-        exit(ERROR);
-    }
-    // int i =0;
-    // printf("BUFFER\n");
-    // for (; i<256; i++) {
-    //     printf("%c - ",buffer[i]);
-    // }
-    printf("\nEND_OF_BUFFER\n");
-    struct t2fs_inode inode;
-    memcpy(&inode.dataPtr[0],buffer, 4);
-    memcpy(&inode.dataPtr[1],buffer+4, 4);
-    memcpy(&inode.singleIndPtr, buffer+8, 4);
-    memcpy(&inode.doubleIndPtr, buffer+12, 4);
-    printf("show_inode\n");
-    printf("%i\n", inode.dataPtr[0]);
-    printf("%i\n", inode.dataPtr[1]);
-    printf("%i\n", inode.singleIndPtr);
-    printf("%i\n", inode.doubleIndPtr);
-    return;
-}
-
-struct t2fs_inode* get_inode(int index) {
-    struct t2fs_inode* inode = (struct t2fs_inode*) malloc(sizeof(struct t2fs_inode));
-    char buffer[SECTOR_SIZE];
-    int inodeAreaSectorOffset = 1 + 1 + 1;//superblock+bitmapINODE+bitmapDADOS
-    int inodeIndexOffset = index*(sizeof(struct t2fs_inode));
-    
-    if(read_sector(inodeAreaSectorOffset, buffer) != 0) {
-        printf("ERRO LENDO SETOR: %i\n", inodeAreaSectorOffset);
-        exit(ERROR);
-    }
-    
-    memcpy(inode->dataPtr,buffer+inodeIndexOffset, 8);
-    memcpy(&inode->singleIndPtr, buffer+8+inodeIndexOffset, 4);
-    memcpy(&inode->doubleIndPtr, buffer+12+inodeIndexOffset, 4);
-    
-    // printf("get_inode: %i\n", index);
-    // printf("%i\n", inode->dataPtr[0]);
-    // printf("%i\n", inode->dataPtr[1]);
-    // printf("%i\n", inode->singleIndPtr);
-    // printf("%i\n", inode->doubleIndPtr);
-    return inode;
-}
-
-typedef int BLOCK_TYPE;
-#define BLOCK_TYPE_DATA 0
-#define BLOCK_TYPE_INODE 1
-int data_block_sector_offset;
-
-struct t2fs_record* read_block(int index, BLOCK_TYPE block_type){
-    struct t2fs_record *record = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
-    char buffer[SECTOR_SIZE];
-    
-    int data_block_sector_offset_to_read = data_block_sector_offset;
-    if (block_type == BLOCK_TYPE_DATA) {
-        data_block_sector_offset_to_read += superblock->inodeAreaSize;
-    }
-    int block_sector_offset = index * superblock->blockSize;
-    
-    int sector = data_block_sector_offset_to_read + block_sector_offset;
-    
-    if(read_sector(sector, buffer) != 0) {
-        printf("Erro lendo!\n");
-        printf("Tipo do bloco: %d(%s)\n", block_type, ((block_type == BLOCK_TYPE_DATA) ? "Dados" : "Inode"));
-        printf("Offset \n");
-        printf("Erro lendo!\n");
-        exit(ERROR);
-    }
-    
     int i = 0;
-    printf("\n-------------------------");
-    for (; i < SECTOR_SIZE; i++) {
-        printf("%d: %c\n", i, buffer[i]);
+    for(; i < SECTOR_SIZE * superblock->freeInodeBitmapSize; i++) {
+        printf("bit %i -> %i\n", i, getBitmap2(handle, i));
     }
-    printf("\n-------------------------");
-    
-    memcpy(&record->TypeVal,        buffer,    1);
-    memcpy(&record->name,           buffer+1,  31);
-    memcpy(&record->blocksFileSize, buffer+33, 4);
-    memcpy(&record->bytesFileSize,  buffer+37, 4);
-    memcpy(&record->inodeNumber,    buffer+41, 4);
-    
+}
+
+void show_inode_info(struct t2fs_inode* inode) {
+    printf("show_inode\n");
+    printf("%i\n", inode->dataPtr[0]);
+    printf("%i\n", inode->dataPtr[1]);
+    printf("%i\n", inode->singleIndPtr);
+    printf("%i\n", inode->doubleIndPtr);
+}
+
+void show_record_info(struct t2fs_record* record) {
     printf("show_record\n");
     printf("%hhu\n", record->TypeVal);
     printf("%s\n", record->name);
     printf("%d\n", record->blocksFileSize);
     printf("%d\n", record->bytesFileSize);
     printf("%i\n", record->inodeNumber);
+}
+
+struct t2fs_inode* get_inode(int index) {
+    struct t2fs_inode* inode = (struct t2fs_inode*) malloc(sizeof(struct t2fs_inode));
+    char buffer[SECTOR_SIZE];
+    
+    int inode_index_offset = index * (sizeof(struct t2fs_inode));
+    // PDG: olhar esse inode_index_offset aqui
+    int sector = inode_sector_offset + inode_index_offset;
+    if(read_sector(sector, buffer) != 0) {
+        printf("ERRO LENDO SETOR: %i\n", inode_index_offset);
+        exit(ERROR);
+    }
+    
+    memcpy(inode->dataPtr,buffer+inode_index_offset, 8);
+    memcpy(&inode->singleIndPtr, buffer+8+inode_index_offset, 4);
+    memcpy(&inode->doubleIndPtr, buffer+12+inode_index_offset, 4);
+    
+    return inode;
+}
+
+struct t2fs_record* read_block(int index, BLOCK_TYPE block_type) {
+    struct t2fs_record *record = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
+    char buffer[SECTOR_SIZE];
+    
+    int sector_offset = (block_type == BLOCK_TYPE_DATA) ? data_block_sector_offset : inode_sector_offset;
+    int sector_per_block_offset = (index * sectors_per_block);
+    int sector = sector_offset + sector_per_block_offset;
+    if (read_sector(sector, buffer) != 0) {
+        printf("Erro lendo!\n");
+        printf("Tipo do bloco: %d(%s)\n", block_type, ((block_type == BLOCK_TYPE_DATA) ? "Dados" : "Inode"));
+        printf("Offset: %d \n", sector_offset);
+        printf("Setor: %d \n", sector_per_block_offset);
+        exit(ERROR);
+    }
+    
+    int i = 0;
+    printf("-------------------------\n");
+    for (; i < SECTOR_SIZE; i++) {
+        printf("%c", buffer[i]);
+    }
+    printf("-------------------------\n");
+    
+    memcpy(&record->TypeVal,        buffer,    1);
+    memcpy(&record->name,           buffer+1,  31);
+    memcpy(&record->blocksFileSize, buffer+33, 4);
+    memcpy(&record->bytesFileSize,  buffer+37, 4);
+    memcpy(&record->inodeNumber,    buffer+41, 4);
     
     return record;
 }
@@ -161,7 +135,7 @@ static void init_t2fs() {
     char buffer[SECTOR_SIZE];
     
     if (read_sector(0, buffer)) {
-        printf("Erro ao ler o superbloco. O arquivo %s esta no mesmo caminho do executavel?\n", DISK_NAME);
+        printf("Erro ao ler o superbloco. O arquivo '%s' esta no mesmo caminho do executavel?\n", DISK_NAME);
         exit(EXIT_FAILURE);
     }
     
@@ -189,7 +163,10 @@ static void init_t2fs() {
     
     show_superblock_info(superblock);
     
-    data_block_sector_offset = superblock->superblockSize + superblock->freeBlocksBitmapSize + superblock->freeInodeBitmapSize;
+    // Populando var globais
+    inode_sector_offset = superblock->superblockSize + superblock->freeBlocksBitmapSize + superblock->freeInodeBitmapSize;
+    data_block_sector_offset = inode_sector_offset + superblock->inodeAreaSize;
+    sectors_per_block = superblock->blockSize/SECTOR_SIZE;
     
     // printf("BITMAP iNODE\n");
     // show_bitmap_info(BITMAP_INODE);
@@ -216,7 +193,7 @@ int open_entry() {
 
 // Informa a identificação dos desenvolvedores do T2FS.
 int identify2 (char *name, int size) {
-    printf("240501 - Henrique Valcanaia\n243666 - Pietro Degrazia");
+    printf("240501 - Henrique Valcanaia\n243666 - Pietro Degrazia\n");
     return 0;
 }
 
@@ -230,12 +207,15 @@ FILE2 create2 (char *filename) {
 
 // Função usada para remover (apagar) um arquivo do disco.
 int delete2 (char *filename) {
+    INIT();
     return ERROR;
 }
 
 // Função que abre um arquivo existente no disco.
 FILE2 open2 (char *filename) {
-//    return ERROR;
+    //    return ERROR;
+    
+    INIT();
     
     char* string;
     string = strdup(filename);
@@ -269,52 +249,62 @@ FILE2 open2 (char *filename) {
 
 // Função usada para fechar um arquivo.
 int close2 (FILE2 handle) {
+    INIT();
     return ERROR;
 }
 
 // Função usada para realizar a leitura de uma certa quantidade de bytes (size) de um arquivo.
 int read2 (FILE2 handle, char *buffer, int size) {
+    INIT();
     return ERROR;
 }
 
 // Função usada para realizar a escrita de uma certa quantidade de bytes (size) de um arquivo.
 int write2 (FILE2 handle, char *buffer, int size) {
+    INIT();
     return ERROR;
 }
 
 // Função usada para truncar um arquivo. Remove do arquivo todos os bytes a partir da posição atual do contador de posição (current pointer), inclusive, até o seu final.
 int truncate2 (FILE2 handle) {
+    INIT();
     return ERROR;
 }
 
 // Altera o contador de posição (current pointer) do arquivo.
 int seek2 (FILE2 handle, DWORD offset) {
+    INIT();
     return ERROR;
 }
 
 // Função usada para criar um novo diretório.
 int mkdir2 (char *pathname) {
+    INIT();
     return ERROR;
 }
 
 // Função usada para remover (apagar) um diretório do disco.
 int rmdir2 (char *pathname) {
+    INIT();
     return ERROR;
 }
 
 // Função que abre um diretório existente no disco.
 DIR2 opendir2 (char *pathname) {
+    INIT();
     DIR2 dir = ERROR;
     return dir;
 }
 
 // Função usada para ler as entradas de um diretório.
 int readdir2 (DIR2 handle, DIRENT2 *dentry) {
+    INIT();
     return ERROR;
 }
 
 // Função usada para fechar um diretório.
 int closedir2 (DIR2 handle) {
+    INIT();
     return ERROR;
 }
 
