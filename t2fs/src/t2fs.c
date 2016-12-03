@@ -52,8 +52,11 @@ struct t2fs_inode* read_inode(int index) {
         printf("ERRO LENDO SETOR: %i\n", inodeAreaSectorOffset);
         exit(ERROR);
     }
-    
-
+    int inodeOffset = index*sizeof(struct t2fs_inode);
+    memcpy(&inode->dataPtr ,buffer+inodeOffset,sizeof(inode->dataPtr));
+    memcpy(&inode->singleIndPtr, buffer+inodeOffset+sizeof(inode->dataPtr), sizeof(inode->singleIndPtr));
+    memcpy(&inode->doubleIndPtr, buffer+inodeOffset+sizeof(inode->dataPtr)+sizeof(inode->singleIndPtr), sizeof(inode->doubleIndPtr));
+    return inode;
 }
 
 static void init_t2fs() {
@@ -92,6 +95,10 @@ static void init_t2fs() {
     // show_bitmap_info(BITMAP_INODE);
     // printf("BITMAP DADOS\n");
     // show_bitmap_info(BITMAP_DADOS);
+    printf("INODE 0\n");
+    struct t2fs_inode* inode = read_inode(1);
+    printf("%s\n", (inode->dataPtr[0]));
+    printf("%s\n", (inode->dataPtr[1]));
 }
 
 // ----------------------------------------
