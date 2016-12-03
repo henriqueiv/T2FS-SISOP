@@ -47,6 +47,7 @@ static int is_asbsolute_path(char* path) {
 }
 
 void show_superblock_info(struct t2fs_superbloco* superblock) {
+    printf("%s", __PRETTY_FUNCTION__);
     printf("ID: %s\n", superblock->id);
     printf("Version: 0x%x\n", superblock->version);
     printf("Superblock Size: %hu\n", superblock->superblockSize);
@@ -58,14 +59,16 @@ void show_superblock_info(struct t2fs_superbloco* superblock) {
 }
 
 void show_bitmap_info(int handle) {
+    printf("%s", __PRETTY_FUNCTION__);
+    int bitmap_size = (handle == BITMAP_DADOS) ? superblock->freeBlocksBitmapSize : superblock->freeInodeBitmapSize ;
     int i = 0;
-    for(; i < SECTOR_SIZE * superblock->freeInodeBitmapSize; i++) {
+    for(; i < SECTOR_SIZE * bitmap_size; i++) {
         printf("bit %i -> %i\n", i, getBitmap2(handle, i));
     }
 }
 
 void show_inode_info(struct t2fs_inode* inode) {
-    printf("show_inode\n");
+    printf("%s", __PRETTY_FUNCTION__);
     printf("%i\n", inode->dataPtr[0]);
     printf("%i\n", inode->dataPtr[1]);
     printf("%i\n", inode->singleIndPtr);
@@ -73,7 +76,7 @@ void show_inode_info(struct t2fs_inode* inode) {
 }
 
 void show_record_info(struct t2fs_record* record) {
-    printf("show_record\n");
+    printf("%s", __PRETTY_FUNCTION__);
     printf("%hhu\n", record->TypeVal);
     printf("%s\n", record->name);
     printf("%d\n", record->blocksFileSize);
@@ -81,21 +84,28 @@ void show_record_info(struct t2fs_record* record) {
     printf("%i\n", record->inodeNumber);
 }
 
+void show_sector_info(char sector_data[SECTOR_SIZE], const char* format) {
+    int index = 0;
+    for (; index < SECTOR_SIZE; index++) {
+        printf(format, sector_data[index]);
+    }
+}
+
 struct t2fs_inode* get_inode(int index) {
     struct t2fs_inode* inode = (struct t2fs_inode*) malloc(sizeof(struct t2fs_inode));
     char buffer[SECTOR_SIZE];
     
     int inode_index_offset = index * (sizeof(struct t2fs_inode));
-    // PDG: olhar esse inode_index_offset aqui
+    // PDG: olhar esse inode_index_offset aqui. talvez n precise desse offset
     int sector = inode_sector_offset + inode_index_offset;
     if(read_sector(sector, buffer) != 0) {
         printf("ERRO LENDO SETOR: %i\n", inode_index_offset);
         exit(ERROR);
     }
     
-    memcpy(inode->dataPtr,buffer+inode_index_offset, 8);
-    memcpy(&inode->singleIndPtr, buffer+8+inode_index_offset, 4);
-    memcpy(&inode->doubleIndPtr, buffer+12+inode_index_offset, 4);
+    memcpy(inode->dataPtr, buffer + inode_index_offset, 8);
+    memcpy(&inode->singleIndPtr, buffer + inode_index_offset + 8, 4);
+    memcpy(&inode->doubleIndPtr, buffer + inode_index_offset + 12, 4);
     
     return inode;
 }
@@ -115,18 +125,14 @@ struct t2fs_record* read_block(int index, BLOCK_TYPE block_type) {
         exit(ERROR);
     }
     
-    int i = 0;
-    printf("-------------------------\n");
-    for (; i < SECTOR_SIZE; i++) {
-        printf("%c", buffer[i]);
-    }
-    printf("-------------------------\n");
+    // PDG: talvez seja interessante aqui usar sempre sizeof(), exemplo:
+    // memcpy(&record->name, buffer + 1,  sizeof(&record->name));
     
-    memcpy(&record->TypeVal,        buffer,    1);
-    memcpy(&record->name,           buffer+1,  31);
-    memcpy(&record->blocksFileSize, buffer+33, 4);
-    memcpy(&record->bytesFileSize,  buffer+37, 4);
-    memcpy(&record->inodeNumber,    buffer+41, 4);
+    memcpy(&record->TypeVal,        buffer,       1);
+    memcpy(&record->name,           buffer + 1,  31); // PDG: nao eh 32?
+    memcpy(&record->blocksFileSize, buffer + 33,  4);
+    memcpy(&record->bytesFileSize,  buffer + 37,  4);
+    memcpy(&record->inodeNumber,    buffer + 41,  4);
     
     return record;
 }
@@ -168,6 +174,7 @@ static void init_t2fs() {
     data_block_sector_offset = inode_sector_offset + superblock->inodeAreaSize;
     sectors_per_block = superblock->blockSize/SECTOR_SIZE;
     
+    // PDG: ve se precisa disso ainda, se nao precisar remove
     // printf("BITMAP iNODE\n");
     // show_bitmap_info(BITMAP_INODE);
     // printf("BITMAP DADOS\n");
@@ -177,7 +184,7 @@ static void init_t2fs() {
     // printf("%s\n", (inode->dataPtr[0]));
     // printf("%s\n", (inode->dataPtr[1]));
     // show_inode_info(0);
-    struct t2fs_inode *inode = get_inode(3);
+    //    struct t2fs_inode *inode = get_inode(3);
     // // printf("%i\n", inode->dataPtr[0]);
     // struct t2fs_record *record = read_block(inode->dataPtr[0]);
     
@@ -199,8 +206,8 @@ int identify2 (char *name, int size) {
 
 // Função usada para criar um novo arquivo no disco.
 FILE2 create2 (char *filename) {
-    FILE2 file = ERROR;
     INIT();
+    FILE2 file = ERROR;
     
     return file;
 }
@@ -214,7 +221,6 @@ int delete2 (char *filename) {
 // Função que abre um arquivo existente no disco.
 FILE2 open2 (char *filename) {
     //    return ERROR;
-    
     INIT();
     
     char* string;
@@ -223,16 +229,17 @@ FILE2 open2 (char *filename) {
         char* tofree;
         char* token;
         
+        int sector_to_read;
         tofree = string;
         while ((token = strsep(&string, "/")) != NULL) {
             if (strcmp(token, "") == 0) {
                 // raiz
-                printf("raiz\n");
-                struct t2fs_record* entry = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
-                entry = read_block(ROOT_INODE_BLOCK_INDEX, BLOCK_TYPE_INODE);
+                sector_to_read = ROOT_INODE_BLOCK_INDEX;
             } else {
                 printf("%s\n", token);
             }
+            struct t2fs_record* entry = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
+            entry = read_block(, BLOCK_TYPE_INODE);
         }
         
         free(tofree);
