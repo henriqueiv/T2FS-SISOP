@@ -11,6 +11,15 @@
 
 int main(int argc, const char * argv[]) {
 //    create2("");
-    open2("/a/b/c/d/arqx");
-    return 0;
+    open2("/sub/arq2/arqq");
+    
+//    int i = 16;
+//    int id = 1;
+//    printf("%i\n", id%i);
+//    char *path ="/ab/cde/fg.out";
+//    char *component[10];
+//    while ((*component = strsep(&path, "/")) != 0) {
+//        printf("%s\n", *component);
+//    }
+//    return 0;
 }
