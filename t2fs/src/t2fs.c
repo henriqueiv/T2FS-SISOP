@@ -41,11 +41,11 @@ static int records_per_sector;
 struct opened_file {
     int inode_number;
     int pointer;
-    struct opened_file* next;
-    struct opened_file* prev;
+    int occupied;
 };
 
-static struct opened_file* opened_files = NULL;
+struct opened_file opened_files[OPENED_FILES_LIMIT];
+int opened_files_count = 0;
 
 // ------------------------------------
 
@@ -101,66 +101,61 @@ void show_sector_info(char sector_data[SECTOR_SIZE], const char* format) {
     }
 }
 
-int opened_files_count = 0;
-void add_to_opened_list(int inode_number) {
-    struct opened_file* new = malloc(sizeof(struct opened_file));
-    new->inode_number = inode_number;
-    new->next = NULL;
-    new->prev = NULL;
+void show_open_file_info(struct opened_file* file) {
+    printf("--------- %s ---------", __PRETTY_FUNCTION__);
+    printf("\ninode: %d\n", file->inode_number);
+    printf("pointer: %d\n", file->pointer);
+}
+
+void show_opened_files_info() {
+    int i = 0;
+    for (; i < OPENED_FILES_LIMIT; i++) {
+        show_open_file_info(&opened_files[i]);
+    }
+}
+
+int add_to_opened_list(int inode_number) {
+    struct opened_file new;
+    new.inode_number = inode_number;
+    new.occupied = 1;
+    new.pointer = 0;
     
-    if (opened_files == NULL) {
-        opened_files = new;
-        opened_files_count++;
-        return;
+    int freePosition = 0;
+    for (; freePosition < OPENED_FILES_LIMIT; freePosition++) {
+        if (opened_files[freePosition].occupied == 0) {
+            opened_files[opened_files_count] = new;
+            opened_files_count++;
+            return freePosition;
+        }
     }
     
-    struct opened_file* temp = opened_files;
-    while (temp->next != NULL) { temp = temp->next; }
-    temp->next = new;
-    new->prev = temp;
-    opened_files_count++;
+    printf("nenhuma posicao livre\n");
+    return -1;
 }
 
 int is_file_open(int inode_number) {
-    struct opened_file* temp = opened_files;
-    while (temp->next != NULL) {
-        if (temp->inode_number == inode_number) {
+    int i = 0;
+    for (; i < OPENED_FILES_LIMIT; i++) {
+        if (opened_files[i].inode_number == inode_number) {
             return 1;
         }
-        temp = temp->next;
     }
     return 0;
 }
 
 void remove_from_opened_list(int inode_number) {
-    // Se nao tem ngm na lista
-    if (opened_files == NULL) {
-        return;
-    }
-    
-    // Se quer remover o primeiro
-    if (opened_files->inode_number == inode_number) {
-        opened_files->prev->next = opened_files->next; // aponta o ultimo pro segundo
-        
-        struct opened_file* head = opened_files;
-        free(opened_files); // libera memoria da cabeça antiga
-        opened_files = head->next; // head agora é o segundo
-        opened_files_count--;
-        return;
-    }
-    
-    struct opened_file *aux = opened_files;
-    while(aux != NULL) {
-        if (aux->inode_number == inode_number) {
-            aux->prev->next = aux->next;
-            free(aux);
-            
+    int i = 0;
+    for (; i < OPENED_FILES_LIMIT; i++) {
+        printf("Procurado: %d | Comparando: %d\n", inode_number, opened_files[i].inode_number);
+        if (opened_files[i].inode_number == inode_number) {
+            printf("achou\n");
+            opened_files[i].occupied = 0;
             opened_files_count--;
             break;
         }
     }
     
-    printf("Arquivo %d nao esta aberto", inode_number);
+    printf("arquivo não estava aberto\n");
 }
 
 int inodes_per_sector = (SECTOR_SIZE/sizeof(struct t2fs_inode));
@@ -279,6 +274,17 @@ static void init_t2fs() {
     
     show_superblock_info(superblock);
     
+    struct opened_file new;
+    new.inode_number = -1;
+    new.occupied = 0;
+    new.pointer = 0;
+    
+    int i = 0;
+    for (; i < OPENED_FILES_LIMIT; i++) {
+        opened_files[i] = new;
+    }
+    
+    
     // Populando var globais
     inode_sector_offset = superblock->superblockSize + superblock->freeBlocksBitmapSize + superblock->freeInodeBitmapSize;
     data_block_sector_offset = inode_sector_offset + superblock->inodeAreaSize;
@@ -317,6 +323,15 @@ int identify2 (char *name, int size) {
 // Função usada para criar um novo arquivo no disco.
 FILE2 create2 (char *filename) {
     INIT();
+    
+    add_to_opened_list(1);
+    printf("vai remover\n");
+    remove_from_opened_list(1);
+    remove_from_opened_list(2);
+    add_to_opened_list(2);
+    
+    return 1;
+    
     FILE2 file = ERROR;
     
     return file;
@@ -331,6 +346,12 @@ int delete2 (char *filename) {
 // Função que abre um arquivo existente no disco.
 FILE2 open2 (char *filename) {
     INIT();
+    
+    if (opened_files_count >= 20) {
+        printf("Ja existem 20 arquivos abertos");
+        return ERROR;
+    }
+    
     printf("OPENFILE: %s\n", filename);
     struct t2fs_record *record;
     int currentInodeIndex = ROOT_INODE_BLOCK_INDEX;//raiz

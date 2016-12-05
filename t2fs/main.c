@@ -10,7 +10,7 @@
 #include "include/t2fs.h"
 
 int main(int argc, const char * argv[]) {
-//    create2("");
-    open2("/a/b/c/d/arqx");
+    create2("");
+//    open2("/a/b/c/d/arqx");
     return 0;
 }
