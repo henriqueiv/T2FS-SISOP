@@ -42,9 +42,10 @@ struct opened_file {
     int inode_number;
     int pointer;
     struct opened_file* next;
+    struct opened_file* prev;
 };
 
-static struct opened_file* opened_files;
+static struct opened_file* opened_files = NULL;
 
 // ------------------------------------
 
@@ -100,39 +101,66 @@ void show_sector_info(char sector_data[SECTOR_SIZE], const char* format) {
     }
 }
 
+int opened_files_count = 0;
 void add_to_opened_list(int inode_number) {
-    if (opened_files == NULL) {
-        opened_files = (struct opened_file*) malloc(sizeof(struct opened_file));
-    }
-    
-    struct opened_file *aux = opened_files;
-    while(aux != NULL) {
-        aux = aux->next;
-    }
     struct opened_file* new = malloc(sizeof(struct opened_file));
     new->inode_number = inode_number;
     new->next = NULL;
-    new->pointer = 0;
-    aux = new;
+    new->prev = NULL;
+    
+    if (opened_files == NULL) {
+        opened_files = new;
+        opened_files_count++;
+        return;
+    }
+    
+    struct opened_file* temp = opened_files;
+    while (temp->next != NULL) { temp = temp->next; }
+    temp->next = new;
+    new->prev = temp;
+    opened_files_count++;
+}
+
+int is_file_open(int inode_number) {
+    struct opened_file* temp = opened_files;
+    while (temp->next != NULL) {
+        if (temp->inode_number == inode_number) {
+            return 1;
+        }
+        temp = temp->next;
+    }
+    return 0;
 }
 
 void remove_from_opened_list(int inode_number) {
-    struct opened_file *aux = opened_files;
-    struct opened_file *prev;
-    while(aux != NULL) {
-        if (aux->inode_number == inode_number) {
-            free(aux);
-            aux = aux->next;
-            
-            break;
-        }
-        
-        prev = aux;
-        aux = aux->next;
+    // Se nao tem ngm na lista
+    if (opened_files == NULL) {
+        return;
     }
     
+    // Se quer remover o primeiro
+    if (opened_files->inode_number == inode_number) {
+        opened_files->prev->next = opened_files->next; // aponta o ultimo pro segundo
+        
+        struct opened_file* head = opened_files;
+        free(opened_files); // libera memoria da cabeça antiga
+        opened_files = head->next; // head agora é o segundo
+        opened_files_count--;
+        return;
+    }
     
+    struct opened_file *aux = opened_files;
+    while(aux != NULL) {
+        if (aux->inode_number == inode_number) {
+            aux->prev->next = aux->next;
+            free(aux);
+            
+            opened_files_count--;
+            break;
+        }
+    }
     
+    printf("Arquivo %d nao esta aberto", inode_number);
 }
 
 int inodes_per_sector = (SECTOR_SIZE/sizeof(struct t2fs_inode));
