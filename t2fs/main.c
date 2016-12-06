@@ -11,7 +11,8 @@
 
 int main(int argc, const char * argv[]) {
 //    create2("sub/arq3");
+//    open2("sub/arq3");
+//    delete2("sub/arq3");
     
-    open2("sub/arq3");
     return 0;
 }

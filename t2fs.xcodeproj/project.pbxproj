@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		525766601DF67DB30052EE83 /* shell.c in Sources */ = {isa = PBXBuildFile; fileRef = 5257665F1DF67DB30052EE83 /* shell.c */; };
 		62222D851DDA5BCE001C6C58 /* t2fs.c in Sources */ = {isa = PBXBuildFile; fileRef = 62222D841DDA5BCE001C6C58 /* t2fs.c */; };
 		62222D881DDA5F56001C6C58 /* paths.c in Sources */ = {isa = PBXBuildFile; fileRef = 62222D861DDA5F56001C6C58 /* paths.c */; };
 		62959EBD1DDA56A700A7F32C /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 62959EBC1DDA56A700A7F32C /* main.c */; };
@@ -28,6 +29,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		5257665F1DF67DB30052EE83 /* shell.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = shell.c; sourceTree = "<group>"; };
 		62222D841DDA5BCE001C6C58 /* t2fs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = t2fs.c; sourceTree = "<group>"; };
 		62222D861DDA5F56001C6C58 /* paths.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = paths.c; sourceTree = "<group>"; };
 		62222D871DDA5F56001C6C58 /* paths.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = paths.h; sourceTree = "<group>"; };
@@ -80,6 +82,7 @@
 				62959ECD1DDA56BB00A7F32C /* teste */,
 				62959ECB1DDA56BB00A7F32C /* Makefile */,
 				62959EBC1DDA56A700A7F32C /* main.c */,
+				5257665F1DF67DB30052EE83 /* shell.c */,
 			);
 			path = t2fs;
 			sourceTree = "<group>";
@@ -189,6 +192,7 @@
 				62222D851DDA5BCE001C6C58 /* t2fs.c in Sources */,
 				62959ED01DDA56BB00A7F32C /* Makefile in Sources */,
 				62959EBD1DDA56A700A7F32C /* main.c in Sources */,
+				525766601DF67DB30052EE83 /* shell.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
