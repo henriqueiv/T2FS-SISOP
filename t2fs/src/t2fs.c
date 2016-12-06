@@ -51,11 +51,7 @@ int opened_files_count = 0;
 
 struct t2fs_superbloco* superblock;
 
-// MARK: - Private functions
-static int is_asbsolute_path(char* path) {
-    return path[0] == '/';
-}
-
+// MARK: - Auxiliar Show functions
 void show_superblock_info(struct t2fs_superbloco* superblock) {
     printf("%s", __PRETTY_FUNCTION__);
     printf("ID: %s\n", superblock->id);
@@ -65,9 +61,8 @@ void show_superblock_info(struct t2fs_superbloco* superblock) {
     printf("Free inode Bitmap Size: %hu\n", superblock->freeInodeBitmapSize);
     printf("inode Area Size: %hu\n", superblock->inodeAreaSize);
     printf("BlockSize: %hu\n", superblock->blockSize);
-    printf("Disksize: %u\n", superblock->diskSize);
+    printf("Disksize: %u\n\n\n\n\n", superblock->diskSize);
 }
-
 void show_bitmap_info(int handle) {
     printf("%s", __PRETTY_FUNCTION__);
     int bitmap_size = (handle == BITMAP_DADOS) ? superblock->freeBlocksBitmapSize : superblock->freeInodeBitmapSize ;
@@ -76,7 +71,6 @@ void show_bitmap_info(int handle) {
         printf("bit %i -> %i\n", i, getBitmap2(handle, i));
     }
 }
-
 void show_inode_info(struct t2fs_inode* inode) {
     printf("%s", __PRETTY_FUNCTION__);
     printf("%i\n", inode->dataPtr[0]);
@@ -84,7 +78,6 @@ void show_inode_info(struct t2fs_inode* inode) {
     printf("%i\n", inode->singleIndPtr);
     printf("%i\n", inode->doubleIndPtr);
 }
-
 void show_record_info(struct t2fs_record* record) {
     printf("%s", __PRETTY_FUNCTION__);
     printf("%hhu\n", record->TypeVal);
@@ -93,20 +86,17 @@ void show_record_info(struct t2fs_record* record) {
     printf("%d\n", record->bytesFileSize);
     printf("%i\n", record->inodeNumber);
 }
-
 void show_sector_info(char sector_data[SECTOR_SIZE], const char* format) {
     int index = 0;
     for (; index < SECTOR_SIZE; index++) {
         printf(format, sector_data[index]);
     }
 }
-
 void show_open_file_info(struct opened_file* file) {
     printf("--------- %s ---------", __PRETTY_FUNCTION__);
     printf("\ninode: %d\n", file->inode_number);
     printf("pointer: %d\n", file->pointer);
 }
-
 void show_opened_files_info() {
     int i = 0;
     for (; i < OPENED_FILES_LIMIT; i++) {
@@ -114,6 +104,18 @@ void show_opened_files_info() {
     }
 }
 
+// MARK: - Opened Files Functions
+int isLastComponent(char *string) {
+    if (string == NULL) {return 1;}
+    char* tempString;
+    char* nextComponent;
+    tempString = strdup(string);
+    if (tempString == NULL || strlen(tempString) == 0) { return 1; }
+    
+    if ((nextComponent = strsep(&tempString, "/")) == NULL) {return 1;}
+    if (strcmp(nextComponent, "") == 0){ return 1; }
+    return 0;
+}
 int add_to_opened_list(int inode_number) {
     struct opened_file new;
     new.inode_number = inode_number;
@@ -132,7 +134,6 @@ int add_to_opened_list(int inode_number) {
     printf("nenhuma posicao livre\n");
     return -1;
 }
-
 int is_file_open(int inode_number) {
     int i = 0;
     for (; i < OPENED_FILES_LIMIT; i++) {
@@ -142,7 +143,6 @@ int is_file_open(int inode_number) {
     }
     return 0;
 }
-
 void remove_from_opened_list(int inode_number) {
     int i = 0;
     for (; i < OPENED_FILES_LIMIT; i++) {
@@ -158,6 +158,7 @@ void remove_from_opened_list(int inode_number) {
     printf("arquivo não estava aberto\n");
 }
 
+// MARK: - iNode Auxiliar Functions
 int inodes_per_sector = (SECTOR_SIZE/sizeof(struct t2fs_inode));
 struct t2fs_inode* get_inode(int index) {
     struct t2fs_inode* inode = (struct t2fs_inode*) malloc(sizeof(struct t2fs_inode));
@@ -179,32 +180,27 @@ struct t2fs_inode* get_inode(int index) {
     
     return inode;
 }
-
-struct t2fs_record* read_block(int index, BLOCK_TYPE block_type) {
-    struct t2fs_record *record = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
+int put_inode(int index, struct t2fs_inode* inode) {
     char buffer[SECTOR_SIZE];
+    int sector_to_read = inode_sector_offset + index/16; // 16->inodes por setor
+    int inode_index_in_sector = index % 16;
+    int byte_offset_in_block = inode_index_in_sector * sizeof(struct t2fs_inode);
+    printf("inode %i fica no setor %i e é o inode de numero %i a %i bytes de offset.\n", index, sector_to_read, inode_index_in_sector, byte_offset_in_block);
+
+    if(read_sector(sector_to_read, buffer) != 0) { printf("ERRO LENDO SETOR: %i\n", sector_to_read); return ERROR; }
     
-    int sector_offset = (block_type == BLOCK_TYPE_DATA) ? data_block_sector_offset : inode_sector_offset;
-    int sector_per_block_offset = (index * sectors_per_block);
-    int sector = sector_offset + sector_per_block_offset;
-    if (read_sector(sector, buffer) != 0) {
-        printf("Erro lendo!\n");
-        printf("Tipo do bloco: %d(%s)\n", block_type, ((block_type == BLOCK_TYPE_DATA) ? "Dados" : "Inode"));
-        printf("Offset: %d \n", sector_offset);
-        printf("Setor: %d \n", sector_per_block_offset);
-        exit(ERROR);
-    }
+    memcpy(buffer+byte_offset_in_block,      inode->dataPtr,         8); // dataPtr[2]
+    memcpy(buffer+byte_offset_in_block +  8, &inode->singleIndPtr,   4); // singleIndPtr
+    memcpy(buffer+byte_offset_in_block + 12, &inode->doubleIndPtr,   4); // doubleIndPtr
     
-    memcpy(&record->TypeVal,        buffer,       1);
-    memcpy(&record->name,           buffer + 1,  31); // PDG: nao eh 32?
-    memcpy(&record->blocksFileSize, buffer + 33,  4);
-    memcpy(&record->bytesFileSize,  buffer + 37,  4);
-    memcpy(&record->inodeNumber,    buffer + 41,  4);
+    if(write_sector(sector_to_read, buffer) != 0) { printf("ERRO LENDO SETOR: %i\n", sector_to_read); return ERROR; }
     
-    return record;
+    return 0;
 }
 
+// MARK: - Block Auxiliar Functions
 struct t2fs_record* get_record_in_block(char *name, int blockIndex) {
+    printf("Vai procurar arquivo: '%s' no bloco: %i\n", name, blockIndex);
     struct t2fs_record *record = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
     char current_sector_buffer[SECTOR_SIZE];
     int current_sector_disk_index = data_block_sector_offset + (blockIndex*superblock->blockSize);
@@ -241,6 +237,79 @@ struct t2fs_record* get_record_in_block(char *name, int blockIndex) {
     memcpy(&record->inodeNumber,    current_sector_buffer+(current_record_index*T2FS_RECORD_SIZE)+41, 4);
     return record;
 }
+
+int put_record_in_block(struct t2fs_record *record, int blockIndex) {
+    printf("Vai gravar record: '%s' no bloco: %i\n", record->name, blockIndex);
+    char current_sector_buffer[SECTOR_SIZE];
+    int current_sector_disk_index = data_block_sector_offset + (blockIndex*superblock->blockSize);
+    int hasFoundEmptySpot = 0;
+    int current_record_index = 0;
+    int current_sector_block_index = 0;
+    while (current_sector_block_index < superblock->blockSize) {
+        int sector_to_be_read = current_sector_disk_index+current_sector_block_index;
+        if (read_sector(sector_to_be_read, current_sector_buffer) != 0) {
+            printf("Erro lendo setor %i do bloco %i",current_sector_block_index, blockIndex);
+            return ERROR;
+        }
+        current_record_index = 0;
+        while (current_record_index < records_per_sector) {
+            char *name_to_check;
+            name_to_check = malloc(32);//32 = limite do nome dentro de um record
+            strncpy(name_to_check, current_sector_buffer+(current_record_index*T2FS_RECORD_SIZE)+1, 32);
+            printf("Leu o name: %s\n", name_to_check);
+            if (strcmp("", name_to_check) != 0){
+                current_record_index++; continue;
+            }
+            hasFoundEmptySpot = 1;
+            break;
+        }
+        if (hasFoundEmptySpot)
+            break;
+        
+        current_sector_block_index++;
+    }
+    if (!hasFoundEmptySpot) { printf("Bloco cheio\n"); return ERROR; }
+    
+    memcpy( current_sector_buffer+(current_record_index*T2FS_RECORD_SIZE),    &record->TypeVal,         1);
+    memcpy( current_sector_buffer+(current_record_index*T2FS_RECORD_SIZE)+1,  &record->name,           31);
+    memcpy( current_sector_buffer+(current_record_index*T2FS_RECORD_SIZE)+33, &record->blocksFileSize,  4);
+    memcpy( current_sector_buffer+(current_record_index*T2FS_RECORD_SIZE)+37, &record->bytesFileSize,   4);
+    memcpy( current_sector_buffer+(current_record_index*T2FS_RECORD_SIZE)+41, &record->inodeNumber,     4);
+    
+    int sector_to_write = current_sector_disk_index + current_sector_block_index;
+    if (write_sector(sector_to_write, current_sector_buffer) != 0) {
+        printf("Erro escrevendo setor %i do bloco %i",current_sector_block_index, blockIndex);
+        return ERROR;
+    }
+    
+    return 0;
+}
+
+//até o momento não está sendo usada
+struct t2fs_record* read_block(int index, BLOCK_TYPE block_type) {
+    struct t2fs_record *record = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
+    char buffer[SECTOR_SIZE];
+    
+    int sector_offset = (block_type == BLOCK_TYPE_DATA) ? data_block_sector_offset : inode_sector_offset;
+    int sector_per_block_offset = (index * sectors_per_block);
+    int sector = sector_offset + sector_per_block_offset;
+    if (read_sector(sector, buffer) != 0) {
+        printf("Erro lendo!\n");
+        printf("Tipo do bloco: %d(%s)\n", block_type, ((block_type == BLOCK_TYPE_DATA) ? "Dados" : "Inode"));
+        printf("Offset: %d \n", sector_offset);
+        printf("Setor: %d \n", sector_per_block_offset);
+        exit(ERROR);
+    }
+    
+    memcpy(&record->TypeVal,        buffer,       1);
+    memcpy(&record->name,           buffer + 1,  31); // PDG: nao eh 32?
+    memcpy(&record->blocksFileSize, buffer + 33,  4);
+    memcpy(&record->bytesFileSize,  buffer + 37,  4);
+    memcpy(&record->inodeNumber,    buffer + 41,  4);
+    
+    return record;
+}
+//
 
 static void init_t2fs() {
     char buffer[SECTOR_SIZE];
@@ -284,30 +353,12 @@ static void init_t2fs() {
         opened_files[i] = new;
     }
     
-    
     // Populando var globais
     inode_sector_offset = superblock->superblockSize + superblock->freeBlocksBitmapSize + superblock->freeInodeBitmapSize;
     data_block_sector_offset = inode_sector_offset + superblock->inodeAreaSize;
     sectors_per_block = superblock->blockSize/SECTOR_SIZE;
     records_per_sector = SECTOR_SIZE/T2FS_RECORD_SIZE;
-    
-    // printf("BITMAP iNODE\n");
-    // show_bitmap_info(BITMAP_INODE);
-    // printf("BITMAP DADOS\n");
-    // show_bitmap_info(BITMAP_DADOS);
-    // printf("INODE 0\n");
-    // struct t2fs_inode* inode = read_inode(1);
-    // printf("%s\n", (inode->dataPtr[0]));
-    // printf("%s\n", (inode->dataPtr[1]));
-    // show_inode_info(0);
-    // struct t2fs_inode *inode = get_inode(3);
-    // // printf("%i\n", inode->dataPtr[0]);
-    // struct t2fs_record *record = read_block(inode->dataPtr[0]);
-    
-    // inode = get_inode(1);
-    
 }
-
 int open_entry() {
     return -1;
 }
@@ -320,21 +371,113 @@ int identify2 (char *name, int size) {
     return 0;
 }
 
+// Função que abre um arquivo existente no disco.
+FILE2 open2 (char *filename) {
+    INIT();
+    if (opened_files_count >= 20) {printf("Ja existem 20 arquivos abertos");return ERROR;}
+    printf("OPENFILE: %s\n", filename);
+    struct t2fs_record *record;
+    int currentInodeIndex = ROOT_INODE_BLOCK_INDEX;//raiz
+    char* component;
+    char* path;
+    path = strdup(filename);//copia o path
+    if (path == NULL || strlen(path) == 0) { return ERROR; }
+    
+    while ((component = strsep(&path, "/")) != NULL) {
+        if (strcmp(component, "") == 0){ continue; }
+        printf("component: %s  ---  path: %s  --- isLast: %i\n",component, path, isLastComponent(path));
+        printf("Path Component: %s, será procurado no iNode: %i\n", component, currentInodeIndex);
+        struct t2fs_inode *inode = get_inode(currentInodeIndex);
+        record = get_record_in_block(component, inode->dataPtr[0]);
+        if (record == NULL) {printf("parte do path não existia\n");return ERROR;}
+        if (record->TypeVal == TYPEVAL_REGULAR) {break;} // há de se fazer algo pra isso, por enquanto foda-se
+        currentInodeIndex = record->inodeNumber;
+    }
+    if (record == NULL) { printf("não achou\n"); return ERROR; }
+    if (record->TypeVal != TYPEVAL_REGULAR) { printf("achou diretorio onde deveria ser arquivo\n"); return ERROR; }
+    if (strcmp(record->name, basename(filename)) != 0) { printf("achou arquivo onde deveria ser diretorio\n"); return ERROR; }
+    
+    printf("Fim do Open File\n");
+    add_to_opened_list(record->inodeNumber);
+    return record->inodeNumber;
+}
+
 // Função usada para criar um novo arquivo no disco.
 FILE2 create2 (char *filename) {
     INIT();
+    if (opened_files_count >= 20) {printf("Ja existem 20 arquivos abertos");return ERROR;}
+    printf("Create File: %s\n", filename);
+    struct t2fs_record *record;
+    int currentInodeIndex = ROOT_INODE_BLOCK_INDEX;//raiz
+    char* component;
+    char* path;
+    path = strdup(filename);//copia o path
+    if (path == NULL || strlen(path) == 0) { return ERROR; }
+    while ((component = strsep(&path, "/")) != NULL) {
+        if (strcmp(component, "") == 0){
+            if (path == NULL) {printf("nao pode criar arquivo sem nome\n");return ERROR;}
+            continue;
+        }
+        printf("component: %s  ---  path: %s  --- isLast: %i\n",component, path, isLastComponent(path));
+        printf("Path Component: %s, será procurado no iNode: %i\n", component, currentInodeIndex);
+        struct t2fs_inode *inode = get_inode(currentInodeIndex);
+        record = get_record_in_block(component, inode->dataPtr[0]);
+        if ((record != NULL)&&(path == NULL) ) {printf("achou arquivo com o nome, não pode criar\n");return ERROR;}
+        if ((record != NULL)&&(record->TypeVal==TYPEVAL_REGULAR)){printf("achou arquivo onde deveria ser diretorio\n");return ERROR;}
+        if (record == NULL && path == NULL) {
+            printf("achou lugar pra criar\n");
+            break;
+        }
+        if (record == NULL && path != NULL) {printf("Diretorio no path nao existia\n"); return ERROR;}
+        currentInodeIndex = record->inodeNumber;
+    }
+    printf("Agora vai criar o arquivo '%s' com registro no bloco: %i\n", component, get_inode(currentInodeIndex)->dataPtr[0]);
     
-    add_to_opened_list(1);
-    printf("vai remover\n");
-    remove_from_opened_list(1);
-    remove_from_opened_list(2);
-    add_to_opened_list(2);
+    //achar local pra novo bloco
+    int new_block_index = searchBitmap2(BITMAP_DADOS, BIT_FREE);
+    if (new_block_index < 0) { printf("Erro procurando no bitmap de dados\n"); return ERROR;}
+    if (new_block_index == 0) { printf("Todos blocos ocupados.\n"); return ERROR;}
+    if (setBitmap2(BITMAP_DADOS, new_block_index, BIT_TAKEN) != 0) { printf("Erro gravando no bitmap de dados\n"); return ERROR;}
+    printf("Novo Bloco - %i\n", new_block_index);
     
-    return 1;
+    //achar local pra iNODE
+    int new_inode_index = searchBitmap2(BITMAP_INODE, BIT_FREE);
+    if (new_inode_index < 0) { printf("Erro procurando no bitmap de inodes\n"); return ERROR;}
+    if (new_inode_index == 0) { printf("Todos inodes ocupados.\n"); return ERROR;}
+    if (setBitmap2(BITMAP_INODE, new_inode_index, BIT_TAKEN) != 0) { printf("Erro gravando no bitmap de inodes\n"); return ERROR;}
+    printf("Novo iNODE - %i\n", new_inode_index);
     
-    FILE2 file = ERROR;
+    //inserir iNode NA AREA DE INODES (depende do new_block_index)
+    struct t2fs_inode* inode = malloc(sizeof(struct t2fs_inode));
+    inode->dataPtr[0] = new_block_index;
+    inode->dataPtr[1] = -1;
+    inode->doubleIndPtr = -1;
+    inode->singleIndPtr = -1;
+    if (put_inode(new_inode_index, inode) != 0) {printf("Erro gravando inode\n"); return ERROR;}
+    printf("Gravou iNODE no seu Setor\n");
     
-    return file;
+    //inserir record no bloco (precisa do iNode antes)
+    struct t2fs_record *new_record = malloc(T2FS_RECORD_SIZE);
+    printf("**\n");
+    DWORD blocksFileSize = 16;
+    new_record->blocksFileSize = blocksFileSize;
+    printf("**\n");
+    DWORD bytesFileSize = 16 * SECTOR_SIZE;
+    new_record->bytesFileSize = bytesFileSize;
+    printf("**\n");
+    new_record->inodeNumber = new_inode_index;
+    printf("**\n");
+    strcpy(new_record->name, component);
+    printf("**\n");
+    new_record->TypeVal = TYPEVAL_REGULAR;
+    printf("**\n");
+    if (put_record_in_block(new_record, get_inode(currentInodeIndex)->dataPtr[0]) != 0) {printf("Erro atualizando bloco\n"); return ERROR;}
+    printf("**\n");
+    printf("Gravou bloco Atualizado no seu Setor\n");
+    
+    printf("H\n");
+    add_to_opened_list(new_inode_index);
+    return 0;
 }
 
 // Função usada para remover (apagar) um arquivo do disco.
@@ -343,72 +486,13 @@ int delete2 (char *filename) {
     return ERROR;
 }
 
-// Função que abre um arquivo existente no disco.
-FILE2 open2 (char *filename) {
-    INIT();
-    
-    if (opened_files_count >= 20) {
-        printf("Ja existem 20 arquivos abertos");
-        return ERROR;
-    }
-    
-    printf("OPENFILE: %s\n", filename);
-    struct t2fs_record *record;
-    int currentInodeIndex = ROOT_INODE_BLOCK_INDEX;//raiz
-    char* component;
-    char* path;
-    path = strdup(filename);//copia o path
-    if (path == NULL || strlen(path) == 0) {
-        return ERROR;
-    }
-    
-    while ((component = strsep(&path, "/")) != NULL) {
-        if (strcmp(component, "") == 0){
-            continue;
-        }
-        
-        printf("Path Component: %s, será procurado no iNode: %i\n", component, currentInodeIndex);
-        struct t2fs_inode *inode = get_inode(currentInodeIndex);
-        record = get_record_in_block(component, inode->dataPtr[0]);
-        
-        //parte do path não existia
-        if (record == NULL) {
-            return ERROR;
-        }
-        
-        if (record->TypeVal == TYPEVAL_REGULAR) {
-            break; // há de se fazer algo pra isso, por enquanto foda-se
-        }
-        
-        currentInodeIndex = record->inodeNumber;
-    }
-    
-    if (record == NULL) {
-        printf("não achou\n");
-        return ERROR;
-    }
-    
-    if (record->TypeVal != TYPEVAL_REGULAR) {
-        printf("achou diretorio onde deveria ser arquivo\n");
-        return ERROR;
-    }
-    
-    if (strcmp(record->name, basename(filename)) != 0) {
-        printf("achou arquivo onde deveria ser diretorio\n");
-        return ERROR;
-    }
-    
-    printf("Fim do Open File\n");
-    // opened_files[/] = record->inodeNumber;
-    // HIV: botar o amigo pra dentro da opened_files
-    add_to_opened_list(record->inodeNumber);
-    
-    return record->inodeNumber;
-}
-
 // Função usada para fechar um arquivo.
 int close2 (FILE2 handle) {
     INIT();
+    //procura handle no open file
+        //nao tem - erro
+    //achou - marco como não ocupada
+    
     return ERROR;
 }
 
@@ -433,6 +517,10 @@ int truncate2 (FILE2 handle) {
 // Altera o contador de posição (current pointer) do arquivo.
 int seek2 (FILE2 handle, DWORD offset) {
     INIT();
+    //procura o handle no openedfile
+        //nao tem - erro
+    //achou - seta o currentPointer = offset
+    
     return ERROR;
 }
 
@@ -466,115 +554,3 @@ int closedir2 (DIR2 handle) {
     INIT();
     return ERROR;
 }
-
-/*
- * Given an absolute pathname, return the record of the file/subdir, if any
- * Else return NULL
- *
- * For now works only in the root directory, so if you pass "/home/teste" it
- * will be interpreted as "/home"
- */
-//#define PWD_BUFFER_SIZE 256
-//#define RECORD_SIZE sizeof(struct t2fs_record)
-//
-//static struct t2fs_record* get_record(char* pathname) {
-//    assert(pathname && is_absolute_path(pathname) && strlen(pathname) < PWD_BUFFER_SIZE);
-//    assert(SECTOR_SIZE % RECORD_SIZE == 0);
-//
-//    /* There is no record for the root directory */
-//    if (strlen(pathname) == 1)
-//        return NULL;
-//    struct t2fs_record *records;
-//    size_t size = alloc_max_records(&records);
-//    size = read_records(records, size, superblock->RootSectorStart, superblock->DataSectorStart);
-//    assert(size > 0);
-//
-//    // TODO
-//    char *want = leftmost(pathname);
-//    size_t i = 0;
-//    while (i < size && strncmp(records[i].name, want, MAX_FILE_NAME_SIZE))
-//        i++;
-//    if (i >= size) {
-//        free(records);
-//        free(want);
-//        return NULL;
-//    } else {
-//        struct t2fs_record *ans = malloc(sizeof(*ans));
-//        *ans = records[i];
-//        free(records);
-//        free(want);
-//        return ans;
-//    }
-//}
-//
-//
-//FILE2 open_file(char *filename, BYTE type) {
-//    if (!filename) {
-//        printf("Unknown filename!\n");
-//        return -1;
-//    }
-//
-//    if (is_asbsolute_path(filename)) {
-//        struct t2fs_record *record = get_record(filename);
-//        if (!record) {
-//            printf("%s not found in disk\n", filename);
-//            return -1;
-//        }
-//        if (record->TypeVal != type) {
-//            printf("%s is not a %s\n", is_asbsolute_path, type == TYPE_DIR ? "dir" : "file");
-//            return -1;
-//        }
-//        printf("%s found in disk, adding to FT w/ fd %d\n", filename, CT);
-//
-//        struct file_table *e = malloc(sizeof(*e));
-//        e->fd = CT++;
-//        e->record = *record;
-//        e->offset = 0;
-//        HASH_ADD_INT(FT, fd, e);
-//
-//        return e->fd;
-//    } else {
-//        printf("Relative paths not implemented\n");
-//        return -1;
-//    }
-//}
-
-
-
-
-//file open antes de eu mexer
-// Função que abre um arquivo existente no disco.
-//FILE2 open2 (char *filename) {
-//    //    return ERROR;
-//
-//    INIT();
-//
-//    char* string;
-//    string = strdup(filename);
-//    if (string != NULL) {
-//        char* tofree;
-//        char* token;
-//
-//        tofree = string;
-//        while ((token = strsep(&string, "/")) != NULL) {
-//            if (strcmp(token, "") == 0) {
-//                // raiz
-//                printf("raiz\n");
-//                struct t2fs_record* entry = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
-//                entry = read_block(ROOT_INODE_BLOCK_INDEX, BLOCK_TYPE_INODE);
-//            } else {
-//                printf("%s\n", token);
-//            }
-//        }
-//
-//        free(tofree);
-//    }
-//
-//
-//    // olhar todos pq pode querer fechar um arquivo do meio do array
-//    int index = 0;
-//    struct t2fs_record record;
-//    opened_files[index] = record.inodeNumber;
-//
-//    return record.inodeNumber;
-//}

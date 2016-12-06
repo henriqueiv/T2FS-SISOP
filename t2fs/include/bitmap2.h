@@ -5,6 +5,10 @@
 #define	BITMAP_INODE	0
 #define	BITMAP_DADOS	1
 
+#define	BIT_TAKEN	1
+#define	BIT_FREE	0
+
+
 
 /*------------------------------------------------------------------------
 	Recupera o bit indicado do bitmap solicitado
