@@ -182,7 +182,7 @@ int get_index_of_opened_file(int handle) {
 // MARK: - iNode Auxiliar Functions
 int inodes_per_sector = (SECTOR_SIZE/sizeof(struct t2fs_inode));
 struct t2fs_inode* get_inode(int index) {
-    printf("get_inode( %i )\n", index);
+//    printf("get_inode( %i )\n", index);
     struct t2fs_inode* inode = (struct t2fs_inode*) malloc(sizeof(struct t2fs_inode));
     char buffer[SECTOR_SIZE];
     // PDG: ver pra substituir esse 16 por "inodes_per_sector"
@@ -207,7 +207,7 @@ int put_inode(int index, struct t2fs_inode* inode) {
     int sector_to_read = inode_sector_offset + index/16; // 16->inodes por setor
     int inode_index_in_sector = index % 16;
     int byte_offset_in_block = inode_index_in_sector * sizeof(struct t2fs_inode);
-    printf("inode %i fica no setor %i e é o inode de numero %i a %i bytes de offset.\n", index, sector_to_read, inode_index_in_sector, byte_offset_in_block);
+//    printf("inode %i fica no setor %i e é o inode de numero %i a %i bytes de offset.\n", index, sector_to_read, inode_index_in_sector, byte_offset_in_block);
 
     if(read_sector(sector_to_read, buffer) != 0) { printf("ERRO LENDO SETOR: %i\n", sector_to_read); return ERROR; }
     
@@ -221,6 +221,33 @@ int put_inode(int index, struct t2fs_inode* inode) {
 }
 
 // MARK: - Block Auxiliar Functions
+struct t2fs_record* get_record_in_block_with_offset(int blockIndex, DWORD offset) {
+    //    printf("get_record( %i )\n", blockIndex);
+    struct t2fs_record *record = malloc(T2FS_RECORD_SIZE);
+    char buffer[SECTOR_SIZE];
+    
+    int sector_to_read = data_block_sector_offset + (blockIndex*superblock->blockSize) + offset/SECTOR_SIZE;
+    int byte_offset_in_block = offset - ((offset/SECTOR_SIZE)*SECTOR_SIZE);
+    //    int byte_offset_in_block = 0;
+    
+    if(read_sector(sector_to_read, buffer) != 0) {
+        printf("ERRO LENDO SETOR: %i\n", sector_to_read);
+        exit(ERROR);
+    }
+    
+    memcpy(&record->TypeVal,        buffer+(byte_offset_in_block),    1);
+    memcpy(&record->name,           buffer+(byte_offset_in_block)+1,  31);
+    memcpy(&record->blocksFileSize, buffer+(byte_offset_in_block)+33, 4);
+    memcpy(&record->bytesFileSize,  buffer+(byte_offset_in_block)+37, 4);
+    memcpy(&record->inodeNumber,    buffer+(byte_offset_in_block)+41, 4);
+    
+    if (record->TypeVal != TYPEVAL_DIRETORIO && record->TypeVal != TYPEVAL_REGULAR) {
+        return NULL;
+    }
+    
+    
+    return record;
+}
 struct t2fs_record* get_record_in_block(char *name, int blockIndex) {
     printf("Vai procurar arquivo: '%s' no bloco: %i\n", name, blockIndex);
     struct t2fs_record *record = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
@@ -361,20 +388,30 @@ int delete_record_in_block(struct t2fs_record *record, int blockIndex) {
 }
 
 //int write_to_block(DWORD seek_pointer,int blockIndex, char *buffer, int size){
-//    
 //    printf("Vai escrever buffer: '%s' no bloco: %i\n", buffer, blockIndex);
 //    char current_sector_buffer[SECTOR_SIZE];
-//    int current_sector_disk_index = data_block_sector_offset + (blockIndex*superblock->blockSize);
-//    int current_sector_block_index = 0;
-//    while (current_sector_block_index < superblock->blockSize) {
-//        int sector_to_be_read = current_sector_disk_index+current_sector_block_index;
+//    int current_sector_index_in_block = seek_pointer % SECTOR_SIZE;
+//    int current_offset_in_sector = seek_pointer - (current_sector_index_in_block * SECTOR_SIZE);
+//    int first_sector_in_block_index = data_block_sector_offset + (blockIndex*superblock->blockSize);
+//    
+//    while (size > 0 && current_sector_index_in_block < superblock->blockSize) {
+//        int sector_to_be_read = first_sector_in_block_index + current_sector_index_in_block;
 //        if (read_sector(sector_to_be_read, current_sector_buffer) != 0) {
-//            printf("Erro lendo setor %i do bloco %i",current_sector_block_index, blockIndex);
+//            printf("Erro lendo setor %i do bloco %i",sector_to_be_read, blockIndex);
 //            return ERROR;
 //        }
+//// descobrir quanto(size) tenho que escrever de (buffer) para (current_sector_buffer)
+//        //posso escrver SECTOR_SIZE - current_offset_in_sector
+//        int max_size_to_write_in_sector = SECTOR_SIZE - (seek_pointer - (current_sector_index_in_block*SECTOR_SIZE));
+//        if (max_size_to_write_in_sector > size) {max_size_to_write_in_sector = size;}
 //        
-//        strncpy(name_to_check, current_sector_buffer+(current_record_index*T2FS_RECORD_SIZE)+1, 32);
-//        current_sector_block_index++;
+//        //escreve
+//        memcpy(current_sector_buffer+(), buffer, max_size_to_write_in_sector);
+//        
+//        //diminiui size
+//        size -= max_size_to_write_in_sector;
+//        
+//        current_sector_index_in_block++;
 //    }
 //    
 //    int sector_to_write = current_sector_disk_index + current_sector_block_index;
@@ -389,27 +426,27 @@ int delete_record_in_block(struct t2fs_record *record, int blockIndex) {
 
 //até o momento não está sendo usada
 struct t2fs_record* read_block(int index, BLOCK_TYPE block_type) {
-    struct t2fs_record *record = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
-    char buffer[SECTOR_SIZE];
-    
-    int sector_offset = (block_type == BLOCK_TYPE_DATA) ? data_block_sector_offset : inode_sector_offset;
-    int sector_per_block_offset = (index * sectors_per_block);
-    int sector = sector_offset + sector_per_block_offset;
-    if (read_sector(sector, buffer) != 0) {
-        printf("Erro lendo!\n");
-        printf("Tipo do bloco: %d(%s)\n", block_type, ((block_type == BLOCK_TYPE_DATA) ? "Dados" : "Inode"));
-        printf("Offset: %d \n", sector_offset);
-        printf("Setor: %d \n", sector_per_block_offset);
-        exit(ERROR);
-    }
-    
-    memcpy(&record->TypeVal,        buffer,       1);
-    memcpy(&record->name,           buffer + 1,  31); // PDG: nao eh 32?
-    memcpy(&record->blocksFileSize, buffer + 33,  4);
-    memcpy(&record->bytesFileSize,  buffer + 37,  4);
-    memcpy(&record->inodeNumber,    buffer + 41,  4);
-    
-    return record;
+//    struct t2fs_record *record = (struct t2fs_record*) malloc(T2FS_RECORD_SIZE);
+//    char buffer[SECTOR_SIZE];
+//    
+//    int sector_offset = (block_type == BLOCK_TYPE_DATA) ? data_block_sector_offset : inode_sector_offset;
+//    int sector_per_block_offset = (index * sectors_per_block);
+//    int sector = sector_offset + sector_per_block_offset;
+//    if (read_sector(sector, buffer) != 0) {
+//        printf("Erro lendo!\n");
+//        printf("Tipo do bloco: %d(%s)\n", block_type, ((block_type == BLOCK_TYPE_DATA) ? "Dados" : "Inode"));
+//        printf("Offset: %d \n", sector_offset);
+//        printf("Setor: %d \n", sector_per_block_offset);
+//        exit(ERROR);
+//    }
+//    
+//    memcpy(&record->TypeVal,        buffer,       1);
+//    memcpy(&record->name,           buffer + 1,  31); // PDG: nao eh 32?
+//    memcpy(&record->blocksFileSize, buffer + 33,  4);
+//    memcpy(&record->bytesFileSize,  buffer + 37,  4);
+//    memcpy(&record->inodeNumber,    buffer + 41,  4);
+//    
+//    return record;
 }
 //
 
@@ -627,15 +664,19 @@ int close2 (FILE2 handle) {
 int read2 (FILE2 handle, char *buffer, int size) {
     INIT();
     //buscar o inode pelo handle
-    int opened_file_index = get_index_of_opened_file(handle);
-    write_to_block(opened_files[opened_file_index].pointer, get_inode(handle)->dataPtr[0],buffer, size);
-    
+//    int opened_file_index = get_index_of_opened_file(handle);
+
+
     return ERROR;
 }
 
 // Função usada para realizar a escrita de uma certa quantidade de bytes (size) de um arquivo.
 int write2 (FILE2 handle, char *buffer, int size) {
     INIT();
+    //buscar o inode pelo handle
+//    int opened_file_index = get_index_of_opened_file(handle);
+//    write_to_block(opened_files[opened_file_index].pointer, get_inode(handle)->dataPtr[0],buffer, size);
+//    
     return ERROR;
 }
 
@@ -663,21 +704,62 @@ int rmdir2 (char *pathname) {
     return ERROR;
 }
 
-// Função que abre um diretório existente no disco.
+// FOI // Função que abre um diretório existente no disco.
 DIR2 opendir2 (char *pathname) {
     INIT();
-    DIR2 dir = ERROR;
-    return dir;
+    if (opened_files_count >= 20) {printf("Ja existem 20 arquivos abertos");return ERROR;}
+    printf("OPEN DIR: %s\n", pathname);
+    struct t2fs_record *record;
+    int currentInodeIndex = ROOT_INODE_BLOCK_INDEX;//raiz
+    char* component;
+    char* path;
+    path = strdup(pathname);//copia o path
+    if (path == NULL || strlen(path) == 0) { return ERROR; }
+    
+    while ((component = strsep(&path, "/")) != NULL) {
+        if (strcmp(component, "") == 0){ continue; }
+        printf("component: %s  ---  path: %s  --- isLast: %i\n",component, path, isLastComponent(path));
+        printf("Path Component: %s, será procurado no iNode: %i\n", component, currentInodeIndex);
+        struct t2fs_inode *inode = get_inode(currentInodeIndex);
+        record = get_record_in_block(component, inode->dataPtr[0]);
+        if (record == NULL) {printf("parte do path não existia\n");return ERROR;}
+        if (record->TypeVal == TYPEVAL_REGULAR) {break;} // há de se fazer algo pra isso, por enquanto foda-se
+        currentInodeIndex = record->inodeNumber;
+    }
+    if (record == NULL) { printf("não achou\n"); return ERROR; }
+    if (record->TypeVal != TYPEVAL_DIRETORIO) { printf("achou arquivo onde deveria ser DIR\n"); return ERROR; }
+    if (strcmp(record->name, basename(pathname)) != 0) { printf("achou arquivo onde deveria ser diretorio\n"); return ERROR; }
+    
+    printf("Fim do Open DIR - achou-> %s \n", record->name);
+    add_to_opened_list(record->inodeNumber);
+//    show_opened_files_info();
+    return record->inodeNumber;
 }
 
-// Função usada para ler as entradas de um diretório.
+// FOI // Função usada para ler as entradas de um diretório.
 int readdir2 (DIR2 handle, DIRENT2 *dentry) {
     INIT();
-    return ERROR;
+    int opened_dir_index = get_index_of_opened_file(handle);
+    struct opened_file *dir = &(opened_files[opened_dir_index]);
+    DWORD current_offset = dir->pointer;
+    dir->pointer += T2FS_RECORD_SIZE;
+    struct t2fs_inode *inode = get_inode(handle);
+    struct t2fs_record *record = get_record_in_block_with_offset(inode->dataPtr[0], current_offset);
+    if (record == NULL) {
+//        printf("RECORD VEIO NULL. POSSIVEL FIM DO DIRETORIO.\n");
+        return ERROR;
+    }
+    
+    dentry->fileSize = record->bytesFileSize;
+    dentry->fileType = record->TypeVal;
+    strncpy(dentry->name, record->name, 32);
+    
+    return 0;
 }
 
-// Função usada para fechar um diretório.
+
+// FOI // Função usada para fechar um diretório.
 int closedir2 (DIR2 handle) {
     INIT();
-    return ERROR;
+    return remove_from_opened_list(handle);
 }
