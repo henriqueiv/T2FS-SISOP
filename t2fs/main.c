@@ -21,16 +21,26 @@ int printa_todo_diretorio(int handle) {
 
 
 int main(int argc, const char * argv[]) {
-    create2("sub/f");
-    create2("sub/g");
-    create2("sub/h");
-    create2("sub/i");
-    create2("sub/j");
+//    create2("sub/f");
+//    create2("sub/g");
+//    create2("sub/h");
+//    create2("sub/i");
+//    create2("sub/j");
 //    open2("sub/arq3");
 //    delete2("sub/arq3");
-    DIRENT2 entry;
-    int dirHandle = opendir2("sub");
-    printa_todo_diretorio(dirHandle);
+//    mkdir2("dir");
+//    DIRENT2 entry;
+//    int dirHandle = opendir2("dir");
+//    printa_todo_diretorio(dirHandle);
     
+//    mkdir2("dirPopulado");
+//    int dirPopulado = opendir2("dirPopulado");
+//    int arquivo = create2("dirPopulado/arquivo");
+    
+    rmdir2("dirPopulado");
+//    delete2("dirPopulado/arquivo");
+    
+//    mkdir2("dirVazio");
+//    rmdir2("dirVazio");
     return 0;
 }
