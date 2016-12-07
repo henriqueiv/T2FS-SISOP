@@ -115,6 +115,8 @@ void show_opened_files_info() {
 }
 
 int add_to_opened_list(int inode_number) {
+    printf("Inserindo %d...", inode_number);
+    
     struct opened_file new;
     new.inode_number = inode_number;
     new.occupied = 1;
@@ -144,6 +146,8 @@ int is_file_open(int inode_number) {
 }
 
 void remove_from_opened_list(int inode_number) {
+    printf("Removendo %d...", inode_number);
+    
     int i = 0;
     for (; i < OPENED_FILES_LIMIT; i++) {
         printf("Procurado: %d | Comparando: %d\n", inode_number, opened_files[i].inode_number);
@@ -325,7 +329,6 @@ FILE2 create2 (char *filename) {
     INIT();
     
     add_to_opened_list(1);
-    printf("vai remover\n");
     remove_from_opened_list(1);
     remove_from_opened_list(2);
     add_to_opened_list(2);
